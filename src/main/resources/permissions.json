@@ -1,0 +1,33 @@
+{
+  "ApiEndpoints": [
+    {
+      "ApiEndpointId": 1,
+      "Method": "POST",
+      "Endpoint": "/user/customer",
+      "IsPublic": true
+    },
+    {
+      "ApiEndpointId": 2,
+      "Method": "PUT",
+      "Endpoint": "/user/password"
+    },{
+      "ApiEndpointId": 3,
+      "Method": "POST",
+      "Endpoint": "/auth/authenticate",
+      "IsPublic": true
+    },{
+      "ApiEndpointId": 4,
+      "Method": "POST",
+      "Endpoint": "/auth/refreshToken"
+    }
+  ],
+  "Scopes": [
+    {
+      "ScopeName": "Customer",
+      "ApiEndpointIds": [2,4]
+    },{
+      "ScopeName": "SaleAgent",
+      "ApiEndpointIds": [2,4]
+    }
+  ]
+}
