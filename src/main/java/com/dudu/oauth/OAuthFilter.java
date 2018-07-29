@@ -14,11 +14,12 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Date;
 
 @Component
 public class OAuthFilter extends GenericFilterBean {
 
-    public static final String USER_TOKEN = "LOGGED_USER";
+    public static final String USER = "USER";
     private static final Logger logger = LogManager.getLogger(OAuthFilter.class);
 
     private PermissionManager permissionManager;
@@ -83,7 +84,12 @@ public class OAuthFilter extends GenericFilterBean {
         if (!permitted)
             throw new HttpClientErrorException(HttpStatus.UNAUTHORIZED, "Insufficient scope");
 
-        request.setAttribute(USER_TOKEN, token);
+        User user = new User();
+        user.setUserId(claims.getUserId());
+        user.setExpiredAt(new Date(claims.getExp() * 1000));
+        user.setIssuedAt(new Date(claims.getIat() *1000));
+
+        request.setAttribute(USER, user);
         chain.doFilter(request, response);
     }
 }
