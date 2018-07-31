@@ -2,7 +2,6 @@ package com.dudu.payment.stripe;
 
 import com.dudu.database.DatabaseConfiguration;
 
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,21 +9,13 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import javax.sql.DataSource;
-
 @RunWith(SpringRunner.class)
 @ContextConfiguration(classes = {DatabaseConfiguration.class, StripeConfiguration.class})
 @TestPropertySource("/com/dudu/payment/stripe/stripe.properties")
 public class StripeServiceTest {
+
     @Autowired
-    DataSource dataSource;
-
     StripeService stripeService;
-
-    @Before
-    public void setup() {
-        stripeService = new StripeService(dataSource);
-    }
 
     @Test
     public void createCustomer() throws Exception {

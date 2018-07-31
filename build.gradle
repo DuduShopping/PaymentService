@@ -36,6 +36,7 @@ dependencies {
     compile group: 'postgresql', name: 'postgresql', version: '9.1-901-1.jdbc4'
     compile group: 'org.json', name: 'json', version: '20180130'
     compile group: 'com.stripe', name: 'stripe-java', version: '5.36.0'
+    compile group: 'org.projectlombok', name: 'lombok', version: '1.16.22'
 
     // Developer tools are automatically disabled when running a fully packaged application
     compile("org.springframework.boot:spring-boot-devtools")

@@ -1,6 +1,7 @@
 package com.dudu.payment.stripe;
 
 import com.dudu.database.DatabaseRow;
+import lombok.*;
 
 import java.util.Date;
 import java.util.List;
@@ -8,12 +9,26 @@ import java.util.List;
 /**
  * Created by chaojiewang on 5/27/18.
  */
+
+@NoArgsConstructor
 public class StripeCustomer {
+
+    @Getter @Setter
     private long userId;
+
+    @Getter @Setter
     private String customerId;
+
+    @Getter @Setter
     private int lockedReasonCode;
+
+    @Getter @Setter
     private Date createdAt;
+
+    @Getter @Setter
     private StripeSource defaultSource;
+
+    @Getter
     private List<StripeSource> sources;
 
     public static StripeCustomer from(DatabaseRow databaseRow) {
@@ -27,30 +42,6 @@ public class StripeCustomer {
     }
 
     ///////////////////////////////////////
-    public long getUserId() {
-        return userId;
-    }
-
-    public String getCustomerId() {
-        return customerId;
-    }
-
-    public int isLockedReasonCode() {
-        return lockedReasonCode;
-    }
-
-    public Date getCreatedAt() {
-        return createdAt;
-    }
-
-    public StripeSource getDefaultSource() {
-        return defaultSource;
-    }
-
-    public List<StripeSource> getSources() {
-        return sources;
-    }
-
     public void setSources(List<StripeSource> sources) {
         this.sources = sources;
 
@@ -61,13 +52,4 @@ public class StripeCustomer {
             }
         }
     }
-
-    public boolean isLocked() {
-        return lockedReasonCode != 0;
-    }
-
-    public int getLockedReasonCode() {
-        return lockedReasonCode;
-    }
-
 }

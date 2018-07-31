@@ -1,11 +1,17 @@
 package com.dudu.payment.stripe;
 
 import com.dudu.database.DatabaseRow;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+
 import java.util.Date;
 
+@NoArgsConstructor
+@Data
+@EqualsAndHashCode(of = {"stripeChargeToken"})
 public class StripeCharge {
     private String stripeChargeToken;
-
     private long userId;
     private long orderId;
     private long amount;
@@ -24,34 +30,5 @@ public class StripeCharge {
         charge.chargedAt = databaseRow.getDate("charged_at");
 
         return charge;
-    }
-
-    ////////////////////////////////////
-    public long getUserId() {
-        return userId;
-    }
-
-    public long getOrderId() {
-        return orderId;
-    }
-
-    public long getAmount() {
-        return amount;
-    }
-
-    public String getCurrency() {
-        return currency;
-    }
-
-    public String getStripeChargeToken() {
-        return stripeChargeToken;
-    }
-
-    public int getStatus() {
-        return status;
-    }
-
-    public Date getChargedAt() {
-        return chargedAt;
     }
 }

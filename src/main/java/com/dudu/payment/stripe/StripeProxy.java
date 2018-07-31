@@ -1,6 +1,7 @@
 package com.dudu.payment.stripe;
 
 import com.stripe.Stripe;
+import com.stripe.exception.StripeException;
 import com.stripe.model.Charge;
 import com.stripe.model.Customer;
 import com.stripe.model.ExternalAccount;
@@ -36,7 +37,7 @@ class StripeProxy {
      * @return Customer ID
      * @throws Exception
      */
-    synchronized String createCustomer(String description) throws Exception {
+    synchronized String createCustomer(String description) throws StripeException {
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("description", description);
         Customer customer = Customer.create(params);
@@ -51,7 +52,7 @@ class StripeProxy {
      * @return sourceId
      * @throws Exception
      */
-    synchronized String addSource(String customerId, String token) throws Exception {
+    synchronized String addSource(String customerId, String token) throws StripeException {
         Customer customer = Customer.retrieve(customerId);
 
         Map<String, Object> params = new HashMap<>();
@@ -66,7 +67,7 @@ class StripeProxy {
      * @param sourceId
      * @throws Exception
      */
-    void setDefaultPaymentMethod(String customerId, String sourceId) throws Exception {
+    void setDefaultPaymentMethod(String customerId, String sourceId) throws StripeException {
         Customer customer = Customer.retrieve(customerId);
 
         Map<String, Object> updates = new LinkedHashMap<>();
@@ -80,7 +81,7 @@ class StripeProxy {
      * @param amount cents. for example
      * @return charge ID
      */
-    String charge(String customerId, long amount) throws Exception {
+    String charge(String customerId, long amount) throws StripeException {
         final String currency = "usd";
 
         Map<String, Object> charge = new LinkedHashMap<>();

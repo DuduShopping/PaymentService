@@ -3,22 +3,31 @@ package com.dudu.payment.stripe;
 import com.dudu.database.DatabaseHelper;
 import com.dudu.database.DatabaseResult;
 import com.dudu.database.DatabaseRow;
+import com.dudu.payment.stripe.exceptions.NoChargeException;
+import com.dudu.payment.stripe.exceptions.NoCustomerException;
+import com.dudu.payment.stripe.exceptions.NoSourceException;
+import com.dudu.payment.stripe.exceptions.UserLockedException;
+import com.stripe.exception.StripeException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Created by chaojiewang on 5/26/18.
  */
+@Service
 public class StripeService {
     private static final int LOCK_ADD_SOURCE = 100;
     private static final int LOCK_CREATE_CUSTOMER = 200;
     private static final int LOCK_SET_PAYMENT_METHOD = 300;
+    private static final int LOCK_CHARGE = 400;
     private static Logger logger = LogManager.getLogger(StripeService.class);
     private DataSource source;
     private DatabaseHelper databaseHelper = DatabaseHelper.getHelper();
@@ -34,22 +43,20 @@ public class StripeService {
      * @param sourceId
      * @throws Exception
      */
-    public void setPaymentMethod(long userId, String sourceId) throws Exception {
+    public void setPaymentMethod(long userId, String sourceId) throws StripeException, NoCustomerException,
+            NoSourceException, UserLockedException, SQLException {
         // get customer ID
         String customerId = getCustomerId(userId);
 
-        if (customerId == null)
-            throw new IllegalArgumentException("User " + userId + " has no source " + sourceId);
-
         if (isLocked(userId))
-            throw new IllegalArgumentException("Payment of User " + userId + " is locked. It needs human help.");
+            throw new UserLockedException(userId, "");
 
         // make sure database has a record of sourceId
         try (Connection conn = source.getConnection()) {
             String sql = "SELECT * FROM stripe_sources WHERE user_id = ? AND source_id = ?";
             DatabaseResult result = databaseHelper.query(conn, sql, userId, sourceId);
             if (result.isEmpty())
-                throw new IllegalArgumentException("User " + userId + " with source " + sourceId + " is not found in database");
+                throw new NoSourceException(userId, sourceId);
         }
 
         // update stripe, and then database
@@ -60,7 +67,7 @@ public class StripeService {
             if (count != 1) {
                 lock(userId, LOCK_SET_PAYMENT_METHOD);
                 logger.error("Failed to set default payment method: userId = " + userId + ", sourceId = " + sourceId);
-                throw new IllegalStateException("Failed to update stripe_sources");
+                throw new UserLockedException(userId, "Failed to set default payment method: userId = " + userId + ", sourceId = " + sourceId);
             }
         }
     }
@@ -76,7 +83,8 @@ public class StripeService {
      * @param brand
      * @throws Exception
      */
-    public void addSource(long userId, String token, String last4, int expMonth, int expYear, String funding, String brand) throws Exception {
+    public void addSource(long userId, String token, String last4, int expMonth, int expYear, String funding, String brand)
+            throws SQLException, NoCustomerException, StripeException, UserLockedException {
         // get customer ID
         String customerId = getCustomerId(userId);
 
@@ -88,7 +96,7 @@ public class StripeService {
 
         // is it locked?
         if (isLocked(userId))
-            throw new IllegalArgumentException("UserId " + userId + " is locked. It needs human help.");
+            throw new UserLockedException(userId, "");
 
         // create sourceId and save it
         String sourceId = StripeProxy.getInstance().addSource(customerId, token);
@@ -106,7 +114,7 @@ public class StripeService {
                 if (count != 1) {
                     lock(userId, LOCK_ADD_SOURCE);
                     logger.error("Failed to update StripeSources. user_id = " + userId + ", source_id = " + sourceId);
-                    throw new IllegalArgumentException("Failed to add source");
+                    throw new UserLockedException(userId, "Failed to update StripeSources. user_id = " + userId + ", source_id = " + sourceId);
                 }
             }
         }
@@ -117,18 +125,16 @@ public class StripeService {
      * @return could be null
      * @throws Exception
      */
-    private String getCustomerId(long userId) throws Exception {
+    private String getCustomerId(long userId) throws SQLException, NoCustomerException {
         // get customer ID
-        String customerId = null;
         try (Connection conn = source.getConnection()) {
             String sql = "SELECT * FROM stripe_customers WHERE user_id = ? ";
             DatabaseResult result = databaseHelper.query(conn, sql, userId);
-            if (!result.isEmpty()) {
-                customerId = result.get(0).getString("customer_id");
-            }
-        }
+            if (result.isEmpty())
+                throw new NoCustomerException(userId);
 
-        return customerId;
+            return result.get(0).getString("customer_id");
+        }
     }
 
     /**
@@ -137,7 +143,7 @@ public class StripeService {
      * @return customer ID
      * @throws Exception
      */
-    synchronized public String createCustomer(long userId) throws Exception {
+    synchronized public String createCustomer(long userId) throws SQLException, StripeException, UserLockedException {
         // need to create one
         String customerId = StripeProxy.getInstance().createCustomer("UserId = " + userId);
         try (Connection conn = source.getConnection()) {
@@ -147,7 +153,7 @@ public class StripeService {
             if (count != 1) {
                 lock(userId, LOCK_CREATE_CUSTOMER);
                 logger.error("Failed to update stripe_customers: user_id=" + userId + ", customer_id" + customerId);
-                throw new IllegalArgumentException("Failed to add source");
+                throw new UserLockedException(userId, "Failed to update stripe_customers: user_id=" + userId + ", customer_id" + customerId);
             }
         }
 
@@ -161,10 +167,12 @@ public class StripeService {
      * @return
      * @throws Exception
      */
-    protected boolean isLocked(long userId) throws Exception {
+    protected boolean isLocked(long userId) throws NoCustomerException, SQLException {
         try (Connection conn = source.getConnection()) {
             String sql = "SELECT locked_reason_code FROM stripe_customers WHERE user_id = ?";
             DatabaseResult result = databaseHelper.query(conn, sql, userId);
+            if (result.size() == 0)
+                throw new NoCustomerException(userId);
             return result.get(0).getInt("locked_reason_code") != 0;
         }
     }
@@ -176,12 +184,12 @@ public class StripeService {
      * @return
      * @throws Exception
      */
-    private void lock(long userId, int reasonCode) throws Exception {
+    private void lock(long userId, int reasonCode) throws SQLException {
         try (Connection conn = source.getConnection()) {
             String sql = "UPDATE stripe_customers SET locked_reason_code = ? WHERE user_id = ?";
             int count = databaseHelper.update(conn, sql, reasonCode, userId);
             if (count != 1)
-                throw new IllegalArgumentException("Failed to lock User " + userId + " with reason code " + reasonCode);
+                throw new SQLException("Failed to lock User " + userId + " with reason code " + reasonCode);
         }
     }
 
@@ -191,12 +199,12 @@ public class StripeService {
      * @return
      * @throws Exception
      */
-    public StripeCustomer getCustomer(long userId) throws Exception {
+    public StripeCustomer getCustomer(long userId) throws NoCustomerException, SQLException {
         try (Connection conn = source.getConnection()) {
             String sql = "SELECT * FROM stripe_customers WHERE user_id = ?";
             DatabaseResult result = databaseHelper.query(conn, sql , userId);
             if (result.size() != 1)
-                throw new IllegalArgumentException("Unknown userId " + userId);
+                throw new NoCustomerException(userId);
 
             StripeCustomer customer = StripeCustomer.from(result.get(0));
 
@@ -221,10 +229,8 @@ public class StripeService {
      * @return StripeChargeToken
      * @throws Exception
      */
-    public String charge(long orderId, long userId, long amount) throws Exception {
+    public String charge(long orderId, long userId, long amount) throws NoCustomerException, SQLException, StripeException, UserLockedException {
         StripeCustomer customer = getCustomer(userId);
-        if (customer == null)
-            throw new IllegalStateException("Payment from user " + userId + " is missing");
 
         if (isLocked(userId))
             throw new IllegalStateException("User " + userId + " is locked");
@@ -235,17 +241,21 @@ public class StripeService {
             int count = databaseHelper.update(conn, sql, userId, orderId, amount, chargeId);
             if (count != 1) {
                 logger.warn("Failed to add stripe charge to database to user " + userId + ": stripe_charge_token=" +chargeId);
-                throw new IllegalStateException("Failed to add stripe charge to database to user " + userId + ": stripe_charge_token=" +chargeId);
+                lock(userId, LOCK_CHARGE);
+                throw new UserLockedException(userId, "Failed to add stripe charge to database to user " + userId + ": stripe_charge_token=" +chargeId);
             }
 
             return chargeId;
         }
     }
 
-    public StripeCharge getCharge(long userId, String stripeChargeToken) throws Exception {
+    public StripeCharge getCharge(long userId, String stripeChargeToken) throws SQLException, NoChargeException {
         try (Connection conn = source.getConnection()) {
             String sql = "SELECT * FROM stripe_charges WHERE user_id = ? and stripe_charge_token = ?";
             DatabaseResult result = databaseHelper.query(conn, sql, userId, stripeChargeToken);
+            if (result.size() != 1)
+                throw new NoChargeException(stripeChargeToken);
+
             return StripeCharge.from(result.get(0));
         }
     }
