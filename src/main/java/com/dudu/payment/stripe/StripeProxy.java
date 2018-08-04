@@ -92,4 +92,22 @@ class StripeProxy {
         Charge payment = Charge.create(charge);
         return payment.getId();
     }
+
+    /**
+     *
+     * @param sourceId
+     * @param amount cents. for example
+     * @return charge ID
+     */
+    String chargeWithSource(String sourceId, long amount) throws StripeException {
+        final String currency = "usd";
+
+        Map<String, Object> charge = new LinkedHashMap<>();
+        charge.put("amount", amount);
+        charge.put("currency", currency);
+        charge.put("source", sourceId);
+
+        Charge payment = Charge.create(charge);
+        return payment.getId();
+    }
 }

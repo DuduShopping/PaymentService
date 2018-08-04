@@ -1,7 +1,6 @@
 package com.dudu.payment.stripe;
 
 import com.dudu.database.DatabaseConfiguration;
-
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -85,6 +84,15 @@ public class StripeServiceTest {
 
         StripeCharge charge = stripeService.getCharge(userId, stripeChargeToken);
         println(charge.getUserId());
+    }
+
+    @Test
+    public void oneTimeCharge() throws Exception {
+        long userId = 1;
+        long orderId = 3;
+        var sourceId = "tok_mastercard";
+        var chargeId = stripeService.oneTimeCharge(orderId, userId, 1001, sourceId);
+        println(chargeId);
     }
 
     private void println(Object o) {

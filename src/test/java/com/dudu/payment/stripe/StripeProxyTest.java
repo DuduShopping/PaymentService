@@ -54,4 +54,12 @@ public class StripeProxyTest {
         int amount = 100*100;
         String chargeId = stripeProxy.charge(customerId, amount);
     }
+
+    @Test
+    public void chargeWithSource() throws Exception {
+        String source = "tok_mastercard";
+        int amount = 100*100;
+        String chargeId = stripeProxy.chargeWithSource(source, amount);
+        System.out.println(chargeId);
+    }
 }

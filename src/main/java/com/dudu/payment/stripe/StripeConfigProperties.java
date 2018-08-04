@@ -4,7 +4,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import javax.validation.constraints.NotEmpty;
 
 @ConfigurationProperties("stripe")
-
 public class StripeConfigProperties {
 
     @NotEmpty

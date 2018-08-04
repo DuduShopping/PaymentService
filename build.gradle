@@ -30,13 +30,12 @@ dependencies {
     testCompile group: 'org.springframework.boot', name: 'spring-boot-starter-test', version: '2.0.3.RELEASE'
     compile group: 'org.springframework.boot', name: 'spring-boot-starter-web', version: '2.0.3.RELEASE'
     compile group: 'org.springframework.security', name: 'spring-security-jwt', version: '1.0.1.RELEASE'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.9.1'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.9.1'
     compile group: 'com.zaxxer', name: 'HikariCP', version: '2.7.1'
     compile group: 'postgresql', name: 'postgresql', version: '9.1-901-1.jdbc4'
     compile group: 'org.json', name: 'json', version: '20180130'
     compile group: 'com.stripe', name: 'stripe-java', version: '5.36.0'
     compile group: 'org.projectlombok', name: 'lombok', version: '1.16.22'
+    compile group: 'org.apache.kafka', name: 'kafka-clients', version: '1.1.1'
 
     // Developer tools are automatically disabled when running a fully packaged application
     compile("org.springframework.boot:spring-boot-devtools")
@@ -45,3 +44,4 @@ dependencies {
     compile group: 'org.springframework.boot', name: 'spring-boot-configuration-processor', version: '2.0.3.RELEASE'
     annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
 }
+

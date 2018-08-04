@@ -1,6 +1,7 @@
 package com.dudu.payment.stripe;
 
 import com.dudu.database.DatabaseRow;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
 import java.util.Date;

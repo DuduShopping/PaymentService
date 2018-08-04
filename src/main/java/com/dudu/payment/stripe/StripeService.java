@@ -8,8 +8,8 @@ import com.dudu.payment.stripe.exceptions.NoCustomerException;
 import com.dudu.payment.stripe.exceptions.NoSourceException;
 import com.dudu.payment.stripe.exceptions.UserLockedException;
 import com.stripe.exception.StripeException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
@@ -28,7 +28,7 @@ public class StripeService {
     private static final int LOCK_CREATE_CUSTOMER = 200;
     private static final int LOCK_SET_PAYMENT_METHOD = 300;
     private static final int LOCK_CHARGE = 400;
-    private static Logger logger = LogManager.getLogger(StripeService.class);
+    private static Logger logger = LoggerFactory.getLogger(StripeService.class);
     private DataSource source;
     private DatabaseHelper databaseHelper = DatabaseHelper.getHelper();
 
@@ -65,10 +65,12 @@ public class StripeService {
             String sql = "UPDATE stripe_sources SET is_default = 1 WHERE user_id = ? AND source_id = ?";
             int count = databaseHelper.update(conn, sql, userId, sourceId);
             if (count != 1) {
-                lock(userId, LOCK_SET_PAYMENT_METHOD);
-                logger.error("Failed to set default payment method: userId = " + userId + ", sourceId = " + sourceId);
-                throw new UserLockedException(userId, "Failed to set default payment method: userId = " + userId + ", sourceId = " + sourceId);
+                throw new SQLException("Failed to set default payment method: userId = " + userId + ", sourceId = " + sourceId);
             }
+        } catch (SQLException e) {
+            lock(userId, LOCK_SET_PAYMENT_METHOD);
+            logger.error("", e);
+            throw e;
         }
     }
 
@@ -86,12 +88,20 @@ public class StripeService {
     public void addSource(long userId, String token, String last4, int expMonth, int expYear, String funding, String brand)
             throws SQLException, NoCustomerException, StripeException, UserLockedException {
         // get customer ID
-        String customerId = getCustomerId(userId);
-
-        boolean newCustomer = customerId == null;
-        if (newCustomer) {
-            // need to create one
+        String customerId;
+        var newCustomer = false;
+        try {
+            customerId = getCustomerId(userId);
+        } catch (NoCustomerException e) {
             customerId = createCustomer(userId);
+            newCustomer = true;
+        }
+
+        // check if source existed already
+        try (Connection conn = source.getConnection()) {
+            String exist = "SELECT * FROM stripe_sources WHERE source_id = ? AND user_id = ?";
+            if (databaseHelper.notEmpty(conn, exist, token, userId))
+                return; // exists
         }
 
         // is it locked?
@@ -112,11 +122,14 @@ public class StripeService {
                 ps.setObject(8, newCustomer ? 1 : 0);
                 int count = databaseHelper.update(ps);
                 if (count != 1) {
-                    lock(userId, LOCK_ADD_SOURCE);
-                    logger.error("Failed to update StripeSources. user_id = " + userId + ", source_id = " + sourceId);
-                    throw new UserLockedException(userId, "Failed to update StripeSources. user_id = " + userId + ", source_id = " + sourceId);
+                    throw new SQLException("Failed to update StripeSources. user_id = " + userId + ", source_id = " + sourceId);
+
                 }
             }
+        } catch (SQLException e) {
+            logger.error("", e);
+            lock(userId, LOCK_ADD_SOURCE);
+            throw e;
         }
     }
 
@@ -150,11 +163,13 @@ public class StripeService {
             String sql = "INSERT INTO stripe_customers (user_id, customer_id) VALUES (?,?) ";
 
             int count = databaseHelper.update(conn, sql, userId, customerId);
-            if (count != 1) {
-                lock(userId, LOCK_CREATE_CUSTOMER);
-                logger.error("Failed to update stripe_customers: user_id=" + userId + ", customer_id" + customerId);
-                throw new UserLockedException(userId, "Failed to update stripe_customers: user_id=" + userId + ", customer_id" + customerId);
-            }
+            if (count != 1)
+                throw new SQLException("Failed to update stripe_customers: user_id=" + userId + ", customer_id" + customerId);
+
+        } catch (SQLException e) {
+            logger.error("", e);
+            lock(userId, LOCK_CREATE_CUSTOMER);
+            throw e;
         }
 
         return customerId;
@@ -240,12 +255,30 @@ public class StripeService {
             String sql = "INSERT INTO stripe_charges(user_id, order_id, amount, stripe_charge_token) VALUES (?,?,?,?)";
             int count = databaseHelper.update(conn, sql, userId, orderId, amount, chargeId);
             if (count != 1) {
-                logger.warn("Failed to add stripe charge to database to user " + userId + ": stripe_charge_token=" +chargeId);
-                lock(userId, LOCK_CHARGE);
-                throw new UserLockedException(userId, "Failed to add stripe charge to database to user " + userId + ": stripe_charge_token=" +chargeId);
+                throw new SQLException("Failed to add stripe charge to database to user " + userId + ": stripe_charge_token=" +chargeId);
             }
 
             return chargeId;
+        } catch (SQLException e) {
+            logger.error("", e);
+            lock(userId, LOCK_CHARGE);
+            throw e;
+        }
+    }
+
+    public String oneTimeCharge(long orderId, long userId, long amount, String sourceId) throws StripeException, SQLException {
+        var chargeId = StripeProxy.getInstance().chargeWithSource(sourceId, amount);
+
+        try (var conn = source.getConnection()) {
+            String insertCharge = "INSERT INTO stripe_charges (user_id, order_id, amount, currency, stripe_charge_token) VALUES (?,?,?,?,?)";
+            int count = databaseHelper.update(conn, insertCharge, userId, orderId, amount, "USD", chargeId);
+            if (count != 1)
+                throw new SQLException("Failed to record one time charge: chargeId=" + chargeId + ", orderId=" + orderId);
+
+            return chargeId;
+        } catch (SQLException e) {
+            logger.error("", e);
+            throw e;
         }
     }
 
@@ -257,6 +290,35 @@ public class StripeService {
                 throw new NoChargeException(stripeChargeToken);
 
             return StripeCharge.from(result.get(0));
+        }
+    }
+
+    public List<StripeSource> getSources(long userId) throws SQLException {
+        try (Connection conn = source.getConnection()) {
+            var query = "SELECT * FROM stripe_sources WHERE user_id = ?";
+            DatabaseResult databaseResult = databaseHelper.query(conn, query, userId);
+            var stripeSourceList = new ArrayList<StripeSource>();
+            for (var row : databaseResult) {
+                stripeSourceList.add(StripeSource.from(row));
+            }
+            return stripeSourceList;
+        }
+    }
+
+    /**
+     *
+     * @param orderId
+     * @return can be null
+     * @throws SQLException
+     */
+    public StripeCharge getChargeByOrderId(long orderId) throws SQLException {
+        try (Connection conn = source.getConnection()) {
+            var query = "SELECT * FROM stripe_charges WHERE order_id = ?";
+            DatabaseResult databaseResult = databaseHelper.query(conn, query, orderId);
+            if (!databaseResult.isEmpty())
+                return StripeCharge.from(databaseResult.get(0));
+            else
+                return null;
         }
     }
 }
