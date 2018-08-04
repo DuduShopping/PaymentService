@@ -30,8 +30,6 @@ public class OrderConsumer extends Thread {
                          DataSource dataSource) {
         Properties props = new Properties();
         props.put("bootstrap.servers", server);
-        props.put("key.separator", ":");
-        props.put("parse.key", true);
         props.put("group.id", groupId);
         props.put("enable.auto.commit", "true");
         props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
