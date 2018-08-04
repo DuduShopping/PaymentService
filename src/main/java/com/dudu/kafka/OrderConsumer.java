@@ -6,8 +6,11 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 
+import javax.sql.DataSource;
 import java.util.Arrays;
 import java.util.Properties;
 
@@ -18,10 +21,13 @@ public class OrderConsumer extends Thread {
 
     private static long poolTimeOut = 1000;
     private KafkaConsumer<String, String> kafkaConsumer;
+    private ActionHandler actionHandler;
+    private TaskExecutor taskExecutor;
 
     public OrderConsumer(@Value("${kafka.orders.server}") String server,
                          @Value("${kafka.orders.groupId}") String groupId,
-                         @Value("${kafka.orders.topic}") String topic) {
+                         @Value("${kafka.orders.topic}") String topic,
+                         DataSource dataSource) {
         Properties props = new Properties();
         props.put("bootstrap.servers", server);
         props.put("key.separator", ":");
@@ -34,16 +40,16 @@ public class OrderConsumer extends Thread {
         kafkaConsumer = new KafkaConsumer<>(props);
         kafkaConsumer.subscribe(Arrays.asList(topic));
         start();
+
+        actionHandler = new ActionHandler(dataSource);
+        taskExecutor = new SimpleAsyncTaskExecutor();
     }
 
     public void run() {
-        logger.info("Comsumer start running");
         while (true) {
             ConsumerRecords<String, String> records = kafkaConsumer.poll(poolTimeOut);
             for (ConsumerRecord record : records) {
-
-
-                logger.info(record.key() + "=" + record.value());
+                taskExecutor.execute(() -> actionHandler.handle(record.key().toString(), record.value().toString()));
             }
         }
     }
