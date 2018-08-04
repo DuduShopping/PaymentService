@@ -3,6 +3,7 @@ package com.dudu.payment.stripe;
 import com.dudu.database.DatabaseHelper;
 import com.dudu.database.DatabaseResult;
 import com.dudu.database.DatabaseRow;
+import com.dudu.payment.exceptions.OrderNotFoundException;
 import com.dudu.payment.stripe.exceptions.NoChargeException;
 import com.dudu.payment.stripe.exceptions.NoCustomerException;
 import com.dudu.payment.stripe.exceptions.NoSourceException;
@@ -240,20 +241,21 @@ public class StripeService {
      *
      * @param orderId
      * @param userId
-     * @param amount
      * @return StripeChargeToken
      * @throws Exception
      */
-    public String charge(long orderId, long userId, long amount) throws NoCustomerException, SQLException, StripeException, UserLockedException {
+    public String charge(long orderId, long userId) throws NoCustomerException, SQLException, StripeException, UserLockedException, OrderNotFoundException {
         StripeCustomer customer = getCustomer(userId);
 
         if (isLocked(userId))
             throw new IllegalStateException("User " + userId + " is locked");
 
-        String chargeId = StripeProxy.getInstance().charge(customer.getCustomerId(), amount);
+        long paymentDue = findPaymentDue(orderId);
+
+        String chargeId = StripeProxy.getInstance().charge(customer.getCustomerId(), paymentDue);
         try (Connection conn = source.getConnection()) {
             String sql = "INSERT INTO stripe_charges(user_id, order_id, amount, stripe_charge_token) VALUES (?,?,?,?)";
-            int count = databaseHelper.update(conn, sql, userId, orderId, amount, chargeId);
+            int count = databaseHelper.update(conn, sql, userId, orderId, paymentDue, chargeId);
             if (count != 1) {
                 throw new SQLException("Failed to add stripe charge to database to user " + userId + ": stripe_charge_token=" +chargeId);
             }
@@ -266,7 +268,8 @@ public class StripeService {
         }
     }
 
-    public String oneTimeCharge(long orderId, long userId, long amount, String sourceId) throws StripeException, SQLException {
+    public String oneTimeCharge(long orderId, long userId, String sourceId) throws StripeException, SQLException, OrderNotFoundException {
+        long amount = findPaymentDue(orderId);
         var chargeId = StripeProxy.getInstance().chargeWithSource(sourceId, amount);
 
         try (var conn = source.getConnection()) {
@@ -319,6 +322,17 @@ public class StripeService {
                 return StripeCharge.from(databaseResult.get(0));
             else
                 return null;
+        }
+    }
+
+    public long findPaymentDue(long orderId) throws SQLException, OrderNotFoundException {
+        try (Connection con = source.getConnection()) {
+            String findPaymentDue = "SELECT payment_due FROM orders WHERE order_id = ?";
+            DatabaseResult databaseResult = databaseHelper.query(con, findPaymentDue, orderId);
+            if (databaseResult.isEmpty())
+                throw new OrderNotFoundException(orderId);
+
+            return databaseResult.get(0).getLong("payment_due");
         }
     }
 }

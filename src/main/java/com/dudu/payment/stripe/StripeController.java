@@ -2,6 +2,7 @@ package com.dudu.payment.stripe;
 
 import com.dudu.oauth.OAuthFilter;
 import com.dudu.oauth.User;
+import com.dudu.payment.exceptions.OrderNotFoundException;
 import com.dudu.payment.stripe.exceptions.NoCustomerException;
 import com.dudu.payment.stripe.exceptions.UserLockedException;
 import com.stripe.exception.StripeException;
@@ -32,10 +33,13 @@ public class StripeController {
     public void makePayment(@RequestAttribute(OAuthFilter.USER) User user,
                             @Valid PayRequest req) {
         try {
-            stripeService.oneTimeCharge(req.getOrderId(), user.getUserId(), req.getAmount(), req.getSourceId());
+            stripeService.oneTimeCharge(req.getOrderId(), user.getUserId(), req.getSourceId());
         } catch (StripeException | SQLException e) {
             logger.warn("", e);
             throw new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (OrderNotFoundException e) {
+            logger.warn("", e);
+            throw new HttpClientErrorException(HttpStatus.NOT_FOUND, "orderId not found");
         }
     }
 
@@ -46,10 +50,13 @@ public class StripeController {
         try {
             stripeService.addSource(user.getUserId(), req.getSourceId(), req.getLastFour(),
                     req.getExpMonth(), req.getExpYear(), req.getFunding(), req.getBrand());
-            stripeService.oneTimeCharge(req.getOrderId(), user.getUserId(), req.getAmount(), req.getSourceId());
+            stripeService.oneTimeCharge(req.getOrderId(), user.getUserId(), req.getSourceId());
         } catch (SQLException | NoCustomerException | StripeException | UserLockedException e) {
             logger.warn("", e);
             throw new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (OrderNotFoundException e) {
+            logger.warn("", e);
+            throw new HttpClientErrorException(HttpStatus.NOT_FOUND, "orderId not found");
         }
     }
 
@@ -85,9 +92,6 @@ public class StripeController {
     @Data
     public static class PayRequest {
         @NotEmpty
-        private long amount;
-
-        @NotEmpty
         private long orderId;
 
         @NotEmpty
@@ -96,9 +100,6 @@ public class StripeController {
 
     @Data
     public static class PayAndRememberRequest {
-        @NotEmpty
-        private long amount;
-
         @NotEmpty
         private long orderId;
 

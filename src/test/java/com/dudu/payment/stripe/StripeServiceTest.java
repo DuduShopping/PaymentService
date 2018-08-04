@@ -71,9 +71,8 @@ public class StripeServiceTest {
     public void charge() throws Exception {
         long userId = 1;
         long orderId = 1;
-        long amount = 1000;
 
-        String token = stripeService.charge(orderId, userId, amount);
+        String token = stripeService.charge(orderId, userId);
         println(token);
     }
 
@@ -89,9 +88,9 @@ public class StripeServiceTest {
     @Test
     public void oneTimeCharge() throws Exception {
         long userId = 1;
-        long orderId = 3;
+        long orderId = 1;
         var sourceId = "tok_mastercard";
-        var chargeId = stripeService.oneTimeCharge(orderId, userId, 1001, sourceId);
+        var chargeId = stripeService.oneTimeCharge(orderId, userId, sourceId);
         println(chargeId);
     }
 
