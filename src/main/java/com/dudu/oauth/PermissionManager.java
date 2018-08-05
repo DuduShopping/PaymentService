@@ -16,11 +16,15 @@ public class PermissionManager {
     private PathNode urlPublicTree;
     private Map<String, PathNode> urlTreesByScope;
 
+    // endpoint + method
+    private Set<String> urlsWithMethods;
+
     public PermissionManager(String file) throws Exception {
         try (var in = new FileInputStream(file)) {
             var config = new JSONObject(new JSONTokener(in));
 
             // loading endpoints
+            urlsWithMethods = new HashSet<>();
             var apiEndpointMap = new HashMap<Long, ApiEndpoint>();
             var apiEndpointsJson = config.getJSONArray("ApiEndpoints");
             for (int i = 0; i < apiEndpointsJson.length(); i++) {
@@ -32,6 +36,7 @@ public class PermissionManager {
                 apiEndpoint.setPublic(apiEndpointJson.has("IsPublic") && apiEndpointJson.getBoolean("IsPublic"));
 
                 apiEndpointMap.put(apiEndpoint.getApiEndpointId(), apiEndpoint);
+                urlsWithMethods.add(apiEndpoint.getEndpoint() + apiEndpoint.getMethod());
             }
 
             // scopes
@@ -77,6 +82,9 @@ public class PermissionManager {
             logger.info("permission configured successfully");
         }
     }
+
+
+
 
     PathNode buildTree(ApiEndpoint[] apiEndpoints) {
         PathNode urlTree = new PathNode(URL_TREE_ROOT_VALUE);
@@ -138,6 +146,10 @@ public class PermissionManager {
 
         // check public tree
         return match(urlPublicTree, nodeValueList, 0) != null;
+    }
+
+    public boolean contains(String endpoint, String method) {
+        return urlsWithMethods.contains(endpoint+method);
     }
 
     /**

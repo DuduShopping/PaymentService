@@ -3,31 +3,26 @@
     {
       "ApiEndpointId": 1,
       "Method": "POST",
-      "Endpoint": "/user/customer",
-      "IsPublic": true
+      "Endpoint": "/payment/stripe/charge/oneTime"
     },
     {
       "ApiEndpointId": 2,
-      "Method": "PUT",
-      "Endpoint": "/user/password"
+      "Method": "POST",
+      "Endpoint": "/payment/stripe/charge/remembered"
     },{
       "ApiEndpointId": 3,
-      "Method": "POST",
-      "Endpoint": "/auth/authenticate",
-      "IsPublic": true
+      "Method": "GET",
+      "Endpoint": "/payment/stripe/source"
     },{
       "ApiEndpointId": 4,
-      "Method": "POST",
-      "Endpoint": "/auth/refreshToken"
+      "Method": "GET",
+      "Endpoint": "/payment/stripe/charge/*"
     }
   ],
   "Scopes": [
     {
       "ScopeName": "Customer",
-      "ApiEndpointIds": [2,4]
-    },{
-      "ScopeName": "SaleAgent",
-      "ApiEndpointIds": [2,4]
+      "ApiEndpointIds": [1,2,3,4]
     }
   ]
 }

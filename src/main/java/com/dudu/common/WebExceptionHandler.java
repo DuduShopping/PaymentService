@@ -1,9 +1,8 @@
 package com.dudu.common;
 
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,17 +21,17 @@ import java.time.Instant;
 
 @ControllerAdvice
 public class WebExceptionHandler extends ResponseEntityExceptionHandler {
-    private static final Logger logger = LogManager.getLogger(WebExceptionHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(WebExceptionHandler.class);
 
     @ExceptionHandler(value = {HttpClientErrorException.class, HttpServerErrorException.class})
     public ResponseEntity<Object> handleHttpClientErrorException(HttpStatusCodeException httpException, WebRequest request) {
         if (httpException instanceof HttpClientErrorException)
-            logger.warn(httpException);
+            logger.warn("", httpException);
         else if (httpException instanceof HttpServerErrorException)
-            logger.error(httpException);
+            logger.error("", httpException);
 
         var body = new JSONObject();
-        body.put("timeshtamp", Instant.now().toString());
+        body.put("timestamp", Instant.now().toString());
         body.put("status", httpException.getStatusCode().value());
         body.put("message", httpException.getMessage());
 
@@ -42,7 +41,7 @@ public class WebExceptionHandler extends ResponseEntityExceptionHandler {
             var path = url.getPath();
             body.put("path", path);
         } catch (MalformedURLException e) {
-            logger.error(e);
+            logger.error("", e);
         }
         var headers = new HttpHeaders();
         headers.set("Content-Type", MediaType.APPLICATION_JSON.toString());

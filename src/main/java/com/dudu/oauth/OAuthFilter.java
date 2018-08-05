@@ -2,9 +2,10 @@ package com.dudu.oauth;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.json.JSONObject;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.filter.GenericFilterBean;
 
 import javax.servlet.FilterChain;
@@ -12,8 +13,11 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.URL;
+import java.time.Instant;
 import java.util.Date;
 
 @Component
@@ -44,7 +48,11 @@ public class OAuthFilter extends GenericFilterBean {
 
         var endpoint = path.substring(contextPath.length());
         var method = httpRequest.getMethod();
-        logger.debug(endpoint + ", " + method);
+
+        if (!permissionManager.contains(endpoint, method)) {
+            makeResponse(response, HttpStatus.NOT_FOUND, "API is not found");
+            return;
+        }
 
         if (permissionManager.isPublic(endpoint, method)) {
             // this is public url
@@ -54,24 +62,31 @@ public class OAuthFilter extends GenericFilterBean {
 
         // check token
         String authHeader = httpRequest.getHeader("Authorization");
-        if (authHeader == null)
-            throw new HttpClientErrorException(HttpStatus.UNAUTHORIZED);
+        if (authHeader == null) {
+            makeResponse(response, HttpStatus.UNAUTHORIZED, "");
+            return;
+        }
 
-        if (!authHeader.startsWith("Bearer"))
-            throw new HttpClientErrorException(HttpStatus.UNAUTHORIZED, "Expect Bearer authentication");
+        if (!authHeader.startsWith("Bearer")) {
+            makeResponse(response, HttpStatus.UNAUTHORIZED, "Expect Bearer authentication");
+            return;
+        }
 
         var token = authHeader.substring("Bearer".length()).trim();
         Claims claims;
         try {
             claims = tokenDecoder.getClaims(token);
         } catch (Exception e) {
-            logger.debug(e.toString());
-            throw new HttpClientErrorException(HttpStatus.UNAUTHORIZED, "Invalid token");
+            logger.debug("", e);
+            makeResponse(response, HttpStatus.UNAUTHORIZED, "Invalid token");
+            return;
         }
 
         // check if the user is permitted to this url
-        if (claims.getScopes() == null || claims.getScopes().size() == 0)
-            throw new HttpClientErrorException(HttpStatus.UNAUTHORIZED, "Token contains no scope");
+        if (claims.getScopes() == null || claims.getScopes().size() == 0) {
+            makeResponse(response, HttpStatus.UNAUTHORIZED, "Token contains no scope");
+            return;
+        }
 
         var permitted = false;
         for (var scope : claims.getScopes()) {
@@ -81,8 +96,10 @@ public class OAuthFilter extends GenericFilterBean {
             }
         }
 
-        if (!permitted)
-            throw new HttpClientErrorException(HttpStatus.UNAUTHORIZED, "Insufficient scope");
+        if (!permitted) {
+            makeResponse(response, HttpStatus.UNAUTHORIZED, "Insufficient scope");
+            return;
+        }
 
         User user = new User();
         user.setUserId(claims.getUserId());
@@ -91,5 +108,27 @@ public class OAuthFilter extends GenericFilterBean {
 
         request.setAttribute(USER, user);
         chain.doFilter(request, response);
+    }
+
+    private void makeResponse(ServletResponse response, HttpStatus httpStatus, String message) {
+        HttpServletResponse httpServletResponse = (HttpServletResponse) response;
+
+        httpServletResponse.setStatus(httpStatus.value());
+
+        JSONObject body = new JSONObject();
+        body.put("timestamp", Instant.now().toString());
+        body.put("status", httpStatus.value());
+        body.put("message", message);
+        var bodyJson = body.toString();
+
+        httpServletResponse.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        httpServletResponse.setContentLengthLong(bodyJson.length());
+
+        try (PrintWriter writer = httpServletResponse.getWriter()) {
+            writer.write(body.toString());
+        } catch (IOException e) {
+            logger.warn("", e);
+        }
+
     }
 }
