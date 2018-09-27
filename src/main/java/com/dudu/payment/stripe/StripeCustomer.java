@@ -1,7 +1,6 @@
 package com.dudu.payment.stripe;
 
 import com.dudu.database.DatabaseRow;
-import lombok.*;
 
 import java.util.Date;
 import java.util.List;
@@ -10,25 +9,12 @@ import java.util.List;
  * Created by chaojiewang on 5/27/18.
  */
 
-@NoArgsConstructor
 public class StripeCustomer {
-
-    @Getter @Setter
     private long userId;
-
-    @Getter @Setter
     private String customerId;
-
-    @Getter @Setter
     private int lockedReasonCode;
-
-    @Getter @Setter
     private Date createdAt;
-
-    @Getter @Setter
     private StripeSource defaultSource;
-
-    @Getter
     private List<StripeSource> sources;
 
     public static StripeCustomer from(DatabaseRow databaseRow) {
@@ -51,5 +37,49 @@ public class StripeCustomer {
                     defaultSource = source;
             }
         }
+    }
+
+    public long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(long userId) {
+        this.userId = userId;
+    }
+
+    public String getCustomerId() {
+        return customerId;
+    }
+
+    public void setCustomerId(String customerId) {
+        this.customerId = customerId;
+    }
+
+    public int getLockedReasonCode() {
+        return lockedReasonCode;
+    }
+
+    public void setLockedReasonCode(int lockedReasonCode) {
+        this.lockedReasonCode = lockedReasonCode;
+    }
+
+    public Date getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Date createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public StripeSource getDefaultSource() {
+        return defaultSource;
+    }
+
+    public void setDefaultSource(StripeSource defaultSource) {
+        this.defaultSource = defaultSource;
+    }
+
+    public List<StripeSource> getSources() {
+        return sources;
     }
 }

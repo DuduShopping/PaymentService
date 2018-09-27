@@ -6,7 +6,6 @@ import com.dudu.payment.exceptions.OrderNotFoundException;
 import com.dudu.payment.stripe.exceptions.NoCustomerException;
 import com.dudu.payment.stripe.exceptions.UserLockedException;
 import com.stripe.exception.StripeException;
-import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -89,16 +88,30 @@ public class StripeController {
         }
     }
 
-    @Data
     public static class PayRequest {
         @Min(1)
         private long orderId;
 
         @NotEmpty
         private String sourceId;
+
+        public long getOrderId() {
+            return orderId;
+        }
+
+        public void setOrderId(long orderId) {
+            this.orderId = orderId;
+        }
+
+        public String getSourceId() {
+            return sourceId;
+        }
+
+        public void setSourceId(String sourceId) {
+            this.sourceId = sourceId;
+        }
     }
 
-    @Data
     public static class PayAndRememberRequest {
         @Min(1)
         private long orderId;
@@ -112,6 +125,62 @@ public class StripeController {
         private int expYear;
         private String funding;
         private String brand;
+
+        public long getOrderId() {
+            return orderId;
+        }
+
+        public void setOrderId(long orderId) {
+            this.orderId = orderId;
+        }
+
+        public String getSourceId() {
+            return sourceId;
+        }
+
+        public void setSourceId(String sourceId) {
+            this.sourceId = sourceId;
+        }
+
+        public String getLastFour() {
+            return lastFour;
+        }
+
+        public void setLastFour(String lastFour) {
+            this.lastFour = lastFour;
+        }
+
+        public int getExpMonth() {
+            return expMonth;
+        }
+
+        public void setExpMonth(int expMonth) {
+            this.expMonth = expMonth;
+        }
+
+        public int getExpYear() {
+            return expYear;
+        }
+
+        public void setExpYear(int expYear) {
+            this.expYear = expYear;
+        }
+
+        public String getFunding() {
+            return funding;
+        }
+
+        public void setFunding(String funding) {
+            this.funding = funding;
+        }
+
+        public String getBrand() {
+            return brand;
+        }
+
+        public void setBrand(String brand) {
+            this.brand = brand;
+        }
     }
 
 }
