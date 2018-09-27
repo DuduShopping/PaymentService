@@ -47,7 +47,11 @@ public class OrderConsumer extends Thread {
         while (true) {
             ConsumerRecords<String, String> records = kafkaConsumer.poll(poolTimeOut);
             for (ConsumerRecord record : records) {
-                taskExecutor.execute(() -> actionHandler.handle(record.key().toString(), record.value().toString()));
+                try {
+                    taskExecutor.execute(() -> actionHandler.handle(record.key().toString(), record.value().toString()));
+                } catch (Exception e) {
+                    logger.warn("Failed to handle a record:", e);
+                }
             }
         }
     }

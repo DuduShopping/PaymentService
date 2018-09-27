@@ -3,6 +3,7 @@ package com.dudu.payment.stripe;
 import com.dudu.database.DatabaseHelper;
 import com.dudu.database.DatabaseResult;
 import com.dudu.database.DatabaseRow;
+import com.dudu.payment.exceptions.DuplicatePaymentException;
 import com.dudu.payment.exceptions.OrderNotFoundException;
 import com.dudu.payment.stripe.exceptions.NoChargeException;
 import com.dudu.payment.stripe.exceptions.NoCustomerException;
@@ -244,11 +245,15 @@ public class StripeService {
      * @return StripeChargeToken
      * @throws Exception
      */
-    public String charge(long orderId, long userId) throws NoCustomerException, SQLException, StripeException, UserLockedException, OrderNotFoundException {
+    public String charge(long orderId, long userId) throws NoCustomerException, SQLException, StripeException,
+            UserLockedException, OrderNotFoundException, DuplicatePaymentException {
         StripeCustomer customer = getCustomer(userId);
 
         if (isLocked(userId))
-            throw new IllegalStateException("User " + userId + " is locked");
+            throw new UserLockedException(userId, "User " + userId + " is locked");
+
+        if (paidAlready(orderId))
+            throw new DuplicatePaymentException(orderId);
 
         long paymentDue = findPaymentDue(orderId);
 
@@ -333,6 +338,13 @@ public class StripeService {
                 throw new OrderNotFoundException(orderId);
 
             return databaseResult.get(0).getLong("payment_due");
+        }
+    }
+
+    boolean paidAlready(long orderId) throws SQLException {
+        try (Connection con = source.getConnection()) {
+            String select = "SELECT stripe_charge_token FROM stripe_charges WHERE order_id = ?";
+            return databaseHelper.notEmpty(con, select, orderId);
         }
     }
 }

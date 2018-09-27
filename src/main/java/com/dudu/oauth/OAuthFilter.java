@@ -67,7 +67,7 @@ public class OAuthFilter extends GenericFilterBean {
             return;
         }
 
-        if (!authHeader.startsWith("Bearer")) {
+        if (!authHeader.toLowerCase().startsWith("bearer")) {
             makeResponse(response, HttpStatus.UNAUTHORIZED, "Expect Bearer authentication");
             return;
         }

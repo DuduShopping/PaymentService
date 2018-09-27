@@ -15,6 +15,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotEmpty;
 import java.sql.SQLException;
 import java.util.List;
@@ -91,7 +92,7 @@ public class StripeController {
 
     @Data
     public static class PayRequest {
-        @NotEmpty
+        @Min(1)
         private long orderId;
 
         @NotEmpty
@@ -100,7 +101,7 @@ public class StripeController {
 
     @Data
     public static class PayAndRememberRequest {
-        @NotEmpty
+        @Min(1)
         private long orderId;
 
         @NotEmpty
