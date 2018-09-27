@@ -24,15 +24,15 @@ public class StripeSource {
 
     public static StripeSource from(DatabaseRow row) {
         StripeSource stripeSource = new StripeSource();
-        stripeSource.userId = row.getLong("user_id");
-        stripeSource.sourceId = row.getString("Source_id");
-        stripeSource.isDefault = row.getInt("is_default") != 0;
-        stripeSource.createdAt = row.getDate("created_at");
-        stripeSource.lastFour = row.getString("last_four");
-        stripeSource.expMonth = row.getInt("exp_month");
-        stripeSource.expYear = row.getInt("exp_year");
-        stripeSource.funding = row.getString("funding");
-        stripeSource.brand = row.getString("brand");
+        stripeSource.userId = row.getLong("UserId");
+        stripeSource.sourceId = row.getString("SourceId");
+        stripeSource.isDefault = row.getInt("IsDefault") != 0;
+        stripeSource.createdAt = row.getDate("CreatedAt");
+        stripeSource.lastFour = row.getString("LastFour");
+        stripeSource.expMonth = row.getInt("ExpMonth");
+        stripeSource.expYear = row.getInt("ExpYear");
+        stripeSource.funding = row.getString("Funding");
+        stripeSource.brand = row.getString("Brand");
 
         return stripeSource;
     }

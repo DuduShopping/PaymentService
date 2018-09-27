@@ -37,10 +37,10 @@ public class ActionHandler {
     private void handleOrderUpdate(String data) {
         try (Connection con = dataSource.getConnection()){
             JSONObject orderUpdate = new JSONObject(new JSONTokener(data));
-            long orderId = orderUpdate.getLong("orderId");
-            long amount =  orderUpdate.getLong("amount");
+            long orderId = orderUpdate.getLong("OrderId");
+            long amount =  orderUpdate.getLong("Amount");
 
-            String update = "UPDATE orders SET payment_due = ? WHERE order_id = ? ";
+            String update = "UPDATE Orders SET PaymentDue = ? WHERE OrderId = ? ";
             int count = databaseHelper.update(con, update, amount, orderId);
             if (count != 1)
                 throw new SQLException("Expect count = 1");
@@ -53,10 +53,10 @@ public class ActionHandler {
     private void handleOrderNew(String data) {
         try (Connection con = dataSource.getConnection()){
             JSONObject orderNew = new JSONObject(new JSONTokener(data));
-            long orderId = orderNew.getLong("orderId");
-            long amount =  orderNew.getLong("amount");
+            long orderId = orderNew.getLong("OrderId");
+            long amount =  orderNew.getLong("Amount");
 
-            String insert = "INSERT INTO orders(order_id, payment_due) VALUES (?,?) ";
+            String insert = "INSERT INTO Orders(OrderId, PaymentDue) VALUES (?,?) ";
             int count = databaseHelper.update(con, insert, orderId, amount);
             if (count != 1)
                 throw new SQLException("Expect count = 1");

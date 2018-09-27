@@ -21,13 +21,13 @@ public class StripeCharge {
 
     public static StripeCharge from(DatabaseRow databaseRow) {
         StripeCharge charge = new StripeCharge();
-        charge.userId = databaseRow.getLong("user_id");
-        charge.orderId = databaseRow.getLong("order_id");
-        charge.amount = databaseRow.getLong("amount");
-        charge.currency = databaseRow.getString("currency");
-        charge.stripeChargeToken = databaseRow.getString("stripe_charge_token");
-        charge.status = databaseRow.getInt("status");
-        charge.chargedAt = databaseRow.getDate("charged_at");
+        charge.userId = databaseRow.getLong("UserId");
+        charge.orderId = databaseRow.getLong("OrderId");
+        charge.amount = databaseRow.getLong("Amount");
+        charge.currency = databaseRow.getString("Currency");
+        charge.stripeChargeToken = databaseRow.getString("StripeChargeToken");
+        charge.status = databaseRow.getInt("Status");
+        charge.chargedAt = databaseRow.getDate("ChargedAt");
 
         return charge;
     }

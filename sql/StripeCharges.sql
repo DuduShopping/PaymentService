@@ -1,10 +1,10 @@
-CREATE TABLE stripe_charges(
-  user_id BIGINT NOT NULL,
-  order_id BIGINT UNIQUE NOT NULL,
+CREATE TABLE StripeCharges (
+  UserId BIGINT NOT NULL,
+  OrderId BIGINT UNIQUE NOT NULL,
   -- multiple of lowest face value. for example, usd, it will be number of cents.
-  amount BIGINT NOT NULL DEFAULT 0,
-  currency VARCHAR(5) NOT NULL DEFAULT 'USD',
-  stripe_charge_token VARCHAR(50) NOT NULL UNIQUE,
-  status INT NOT NULL DEFAULT 0, -- TODO Do i need this
-  charged_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  Amount BIGINT NOT NULL DEFAULT 0,
+  Currency VARCHAR(5) NOT NULL DEFAULT 'USD',
+  StripeChargeToken VARCHAR(50) NOT NULL UNIQUE,
+  Status INT NOT NULL DEFAULT 0, -- TODO Do i need this
+  ChargedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 )

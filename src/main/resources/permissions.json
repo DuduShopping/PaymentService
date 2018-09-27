@@ -16,7 +16,7 @@
     },{
       "ApiEndpointId": 4,
       "Method": "GET",
-      "Endpoint": "/payment/stripe/charge/*"
+      "Endpoint": "/payment/stripe/charge"
     }
   ],
   "Scopes": [

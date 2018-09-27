@@ -73,11 +73,10 @@ public class StripeController {
         }
     }
 
-    @GetMapping(value = "/payment/stripe/charge/{orderId}")
+    @GetMapping(value = "/payment/stripe/charge")
     @ResponseStatus(HttpStatus.OK)
     public StripeCharge getCharge(@RequestAttribute(OAuthFilter.USER) User user,
-                                  @PathVariable("orderId") long orderId) {
-        logger.info("hihih");
+                                  @RequestParam("orderId") long orderId) {
         try {
             var stripeCharge = stripeService.getChargeByOrderId(orderId);
             if (stripeCharge == null || stripeCharge.getUserId() != user.getUserId())

@@ -33,10 +33,10 @@ public class StripeCustomer {
 
     public static StripeCustomer from(DatabaseRow databaseRow) {
         StripeCustomer stripeCustomer = new StripeCustomer();
-        stripeCustomer.userId = databaseRow.getLong("user_id");
-        stripeCustomer.customerId = databaseRow.getString("customer_id");
-        stripeCustomer.lockedReasonCode = databaseRow.getInt("locked_reason_code");
-        stripeCustomer.createdAt = databaseRow.getDate("created_at");
+        stripeCustomer.userId = databaseRow.getLong("UserId");
+        stripeCustomer.customerId = databaseRow.getString("CustomerId");
+        stripeCustomer.lockedReasonCode = databaseRow.getInt("LockedReasonCode");
+        stripeCustomer.createdAt = databaseRow.getDate("CreatedAt");
 
         return stripeCustomer;
     }

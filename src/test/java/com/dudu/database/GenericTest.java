@@ -21,7 +21,7 @@ public class GenericTest {
     @Test
     public void test() throws Exception {
         try (Connection con = dataSource.getConnection()) {
-            var sql = "SELECT * FROM stripe_sources";
+            var sql = "SELECT * FROM StripeSources";
             var result = DatabaseHelper.getHelper().query(con, sql);
             System.out.println(result.size());
         }

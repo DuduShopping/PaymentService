@@ -1,4 +1,4 @@
-CREATE TABLE orders (
-  order_id BIGINT NOT NULL UNIQUE,
-  payment_due BIGINT NOT NULL
+CREATE TABLE Orders (
+  OrderId BIGINT NOT NULL UNIQUE,
+  PaymentDue BIGINT NOT NULL
 )

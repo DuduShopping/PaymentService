@@ -55,7 +55,7 @@ public class StripeService {
 
         // make sure database has a record of sourceId
         try (Connection conn = source.getConnection()) {
-            String sql = "SELECT * FROM stripe_sources WHERE user_id = ? AND source_id = ?";
+            String sql = "SELECT * FROM StripeSources WHERE UserId = ? AND SourceId = ? ";
             DatabaseResult result = databaseHelper.query(conn, sql, userId, sourceId);
             if (result.isEmpty())
                 throw new NoSourceException(userId, sourceId);
@@ -64,7 +64,7 @@ public class StripeService {
         // update stripe, and then database
         StripeProxy.getInstance().setDefaultPaymentMethod(customerId, sourceId);
         try (Connection conn = source.getConnection()) {
-            String sql = "UPDATE stripe_sources SET is_default = 1 WHERE user_id = ? AND source_id = ?";
+            String sql = "UPDATE StripeSources SET IsDefault = 1 WHERE UserId = ? AND SourceId = ?";
             int count = databaseHelper.update(conn, sql, userId, sourceId);
             if (count != 1) {
                 throw new SQLException("Failed to set default payment method: userId = " + userId + ", sourceId = " + sourceId);
@@ -101,7 +101,7 @@ public class StripeService {
 
         // check if source existed already
         try (Connection conn = source.getConnection()) {
-            String exist = "SELECT * FROM stripe_sources WHERE source_id = ? AND user_id = ?";
+            String exist = "SELECT * FROM StripeSources WHERE SourceId = ? AND UserId = ?";
             if (databaseHelper.notEmpty(conn, exist, token, userId))
                 return; // exists
         }
@@ -113,7 +113,7 @@ public class StripeService {
         // create sourceId and save it
         String sourceId = StripeProxy.getInstance().addSource(customerId, token);
         try (Connection conn = source.getConnection()) {
-            try (PreparedStatement ps = conn.prepareStatement("INSERT INTO stripe_sources (user_id, source_id, last_four, exp_month, exp_year, funding, brand, is_default) VALUES (?,?,?,?,?,?,?,?)")) {
+            try (PreparedStatement ps = conn.prepareStatement("INSERT INTO StripeSources (UserId, SourceId, LastFour, ExpMonth, ExpYear, Funding, Brand, IsDefault) VALUES (?,?,?,?,?,?,?,?)")) {
                 ps.setObject(1, userId);
                 ps.setObject(2, sourceId);
                 ps.setObject(3, last4);
@@ -124,7 +124,7 @@ public class StripeService {
                 ps.setObject(8, newCustomer ? 1 : 0);
                 int count = databaseHelper.update(ps);
                 if (count != 1) {
-                    throw new SQLException("Failed to update StripeSources. user_id = " + userId + ", source_id = " + sourceId);
+                    throw new SQLException("Failed to update StripeSources. UserId = " + userId + ", SourceId = " + sourceId);
 
                 }
             }
@@ -143,12 +143,12 @@ public class StripeService {
     private String getCustomerId(long userId) throws SQLException, NoCustomerException {
         // get customer ID
         try (Connection conn = source.getConnection()) {
-            String sql = "SELECT * FROM stripe_customers WHERE user_id = ? ";
+            String sql = "SELECT * FROM StripeCustomers WHERE UserId = ? ";
             DatabaseResult result = databaseHelper.query(conn, sql, userId);
             if (result.isEmpty())
                 throw new NoCustomerException(userId);
 
-            return result.get(0).getString("customer_id");
+            return result.get(0).getString("CustomerId");
         }
     }
 
@@ -162,11 +162,11 @@ public class StripeService {
         // need to create one
         String customerId = StripeProxy.getInstance().createCustomer("UserId = " + userId);
         try (Connection conn = source.getConnection()) {
-            String sql = "INSERT INTO stripe_customers (user_id, customer_id) VALUES (?,?) ";
+            String sql = "INSERT INTO StripeCustomers (UserId, CustomerId) VALUES (?,?) ";
 
             int count = databaseHelper.update(conn, sql, userId, customerId);
             if (count != 1)
-                throw new SQLException("Failed to update stripe_customers: user_id=" + userId + ", customer_id" + customerId);
+                throw new SQLException("Failed to update StripeCustomers: UserId=" + userId + ", CustomerId" + customerId);
 
         } catch (SQLException e) {
             logger.error("", e);
@@ -186,11 +186,11 @@ public class StripeService {
      */
     protected boolean isLocked(long userId) throws NoCustomerException, SQLException {
         try (Connection conn = source.getConnection()) {
-            String sql = "SELECT locked_reason_code FROM stripe_customers WHERE user_id = ?";
+            String sql = "SELECT LockedReasonCode FROM StripeCustomers WHERE UserId = ?";
             DatabaseResult result = databaseHelper.query(conn, sql, userId);
             if (result.size() == 0)
                 throw new NoCustomerException(userId);
-            return result.get(0).getInt("locked_reason_code") != 0;
+            return result.get(0).getInt("LockedReasonCode") != 0;
         }
     }
 
@@ -203,7 +203,7 @@ public class StripeService {
      */
     private void lock(long userId, int reasonCode) throws SQLException {
         try (Connection conn = source.getConnection()) {
-            String sql = "UPDATE stripe_customers SET locked_reason_code = ? WHERE user_id = ?";
+            String sql = "UPDATE StripeCustomers SET LockedReasonCode = ? WHERE UserId = ?";
             int count = databaseHelper.update(conn, sql, reasonCode, userId);
             if (count != 1)
                 throw new SQLException("Failed to lock User " + userId + " with reason code " + reasonCode);
@@ -218,14 +218,14 @@ public class StripeService {
      */
     public StripeCustomer getCustomer(long userId) throws NoCustomerException, SQLException {
         try (Connection conn = source.getConnection()) {
-            String sql = "SELECT * FROM stripe_customers WHERE user_id = ?";
+            String sql = "SELECT * FROM StripeCustomers WHERE UserId = ?";
             DatabaseResult result = databaseHelper.query(conn, sql , userId);
             if (result.size() != 1)
                 throw new NoCustomerException(userId);
 
             StripeCustomer customer = StripeCustomer.from(result.get(0));
 
-            sql = "SELECT * FROM stripe_sources WHERE user_id = ?";
+            sql = "SELECT * FROM StripeSources WHERE UserId = ?";
             result = databaseHelper.query(conn, sql, userId);
             List<StripeSource> sources = new ArrayList<>();
             for (DatabaseRow row : result) {
@@ -259,7 +259,7 @@ public class StripeService {
 
         String chargeId = StripeProxy.getInstance().charge(customer.getCustomerId(), paymentDue);
         try (Connection conn = source.getConnection()) {
-            String sql = "INSERT INTO stripe_charges(user_id, order_id, amount, stripe_charge_token) VALUES (?,?,?,?)";
+            String sql = "INSERT INTO StripeCharges(UserId, OrderId, Amount, StripeChargeToken) VALUES (?,?,?,?)";
             int count = databaseHelper.update(conn, sql, userId, orderId, paymentDue, chargeId);
             if (count != 1) {
                 throw new SQLException("Failed to add stripe charge to database to user " + userId + ": stripe_charge_token=" +chargeId);
@@ -278,7 +278,7 @@ public class StripeService {
         var chargeId = StripeProxy.getInstance().chargeWithSource(sourceId, amount);
 
         try (var conn = source.getConnection()) {
-            String insertCharge = "INSERT INTO stripe_charges (user_id, order_id, amount, currency, stripe_charge_token) VALUES (?,?,?,?,?)";
+            String insertCharge = "INSERT INTO StripeCharges (UserId, OrderId, Amount, Currency, StripeChargeToken) VALUES (?,?,?,?,?)";
             int count = databaseHelper.update(conn, insertCharge, userId, orderId, amount, "USD", chargeId);
             if (count != 1)
                 throw new SQLException("Failed to record one time charge: chargeId=" + chargeId + ", orderId=" + orderId);
@@ -292,7 +292,7 @@ public class StripeService {
 
     public StripeCharge getCharge(long userId, String stripeChargeToken) throws SQLException, NoChargeException {
         try (Connection conn = source.getConnection()) {
-            String sql = "SELECT * FROM stripe_charges WHERE user_id = ? and stripe_charge_token = ?";
+            String sql = "SELECT * FROM StripeCharges WHERE UserId = ? and StripeChargeToken = ?";
             DatabaseResult result = databaseHelper.query(conn, sql, userId, stripeChargeToken);
             if (result.size() != 1)
                 throw new NoChargeException(stripeChargeToken);
@@ -303,7 +303,7 @@ public class StripeService {
 
     public List<StripeSource> getSources(long userId) throws SQLException {
         try (Connection conn = source.getConnection()) {
-            var query = "SELECT * FROM stripe_sources WHERE user_id = ?";
+            var query = "SELECT * FROM StripeSources WHERE UserId = ?";
             DatabaseResult databaseResult = databaseHelper.query(conn, query, userId);
             var stripeSourceList = new ArrayList<StripeSource>();
             for (var row : databaseResult) {
@@ -321,7 +321,7 @@ public class StripeService {
      */
     public StripeCharge getChargeByOrderId(long orderId) throws SQLException {
         try (Connection conn = source.getConnection()) {
-            var query = "SELECT * FROM stripe_charges WHERE order_id = ?";
+            var query = "SELECT * FROM StripeCharges WHERE OrderId = ?";
             DatabaseResult databaseResult = databaseHelper.query(conn, query, orderId);
             if (!databaseResult.isEmpty())
                 return StripeCharge.from(databaseResult.get(0));
@@ -332,18 +332,18 @@ public class StripeService {
 
     public long findPaymentDue(long orderId) throws SQLException, OrderNotFoundException {
         try (Connection con = source.getConnection()) {
-            String findPaymentDue = "SELECT payment_due FROM orders WHERE order_id = ?";
+            String findPaymentDue = "SELECT PaymentDue FROM Orders WHERE OrderId = ?";
             DatabaseResult databaseResult = databaseHelper.query(con, findPaymentDue, orderId);
             if (databaseResult.isEmpty())
                 throw new OrderNotFoundException(orderId);
 
-            return databaseResult.get(0).getLong("payment_due");
+            return databaseResult.get(0).getLong("PaymentDue");
         }
     }
 
     boolean paidAlready(long orderId) throws SQLException {
         try (Connection con = source.getConnection()) {
-            String select = "SELECT stripe_charge_token FROM stripe_charges WHERE order_id = ?";
+            String select = "SELECT StripeChargeToken FROM StripeCharges WHERE OrderId = ?";
             return databaseHelper.notEmpty(con, select, orderId);
         }
     }
