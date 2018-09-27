@@ -1,15 +1,15 @@
 package com.dudu.oauth;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
 import org.json.JSONTokener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileInputStream;
 import java.util.*;
 
 public class PermissionManager {
-    private final Logger logger = LogManager.getLogger(PermissionManager.class);
+    private final Logger logger = LoggerFactory.getLogger(PermissionManager.class);
 
     // Path Node is prefix by method
     private static final String URL_TREE_ROOT_VALUE = "dudu";

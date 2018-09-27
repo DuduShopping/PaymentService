@@ -5,8 +5,8 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.Charge;
 import com.stripe.model.Customer;
 import com.stripe.model.ExternalAccount;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -17,7 +17,7 @@ import java.util.Map;
  * Created by Chaojie (Jack) Wang on 5/17/18.
  */
 class StripeProxy {
-    private static final Logger logger = LogManager.getLogger(StripeProxy.class);
+    private static final Logger logger = LoggerFactory.getLogger(StripeProxy.class);
 
     static StripeProxy getInstance() {
         return proxy;
